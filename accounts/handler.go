@@ -3,18 +3,18 @@ package accounts
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
+	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
 )
 
 type Handler struct {
-	*server.Middleware
 	ctrl *controller
 }
 
-func (h *Handler) postAccountsHandler(rw http.ResponseWriter, req *http.Request) {
+func (h *Handler) createAccountsHandler() http.HandlerFunc {
 
 	type request struct {
 		Name     string `json:"name"`
@@ -28,50 +28,44 @@ func (h *Handler) postAccountsHandler(rw http.ResponseWriter, req *http.Request)
 		Email string `json:"email"`
 	}
 
-	var body request
+	return middleware.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
 
-	err := json.NewDecoder(req.Body).Decode(&body)
+		var body request
 
-	if err != nil {
-		server.NewError("error to parse body", http.StatusBadRequest).Json(rw)
-		return
-	}
+		err := json.NewDecoder(r.Body).Decode(&body)
 
-	account, err := newAccount(body.Name, body.Password, body.Email)
+		if err != nil {
+			return server.NewError("Error to parse resource", server.ResourceParse)
+		}
 
-	if err != nil {
-		server.NewError("not was possible to create the account", http.StatusBadRequest).Json(rw)
-		return
-	}
+		account, err := newAccount(body.Name, body.Password, body.Email)
 
-	account, err = h.ctrl.create(req.Context(), account)
+		if err != nil {
+			return server.NewError("Error to create account", server.ResourceInvalid)
+		}
 
-	if err != nil {
-		server.NewError(err.Error(), http.StatusBadRequest).Json(rw)
-		return
-	}
+		account, err = h.ctrl.create(r.Context(), account)
 
-	res := &response{
-		ID:    account.id.String(),
-		Name:  account.name,
-		Email: account.email,
-	}
+		if err != nil {
+			return err
+		}
 
-	server.Json(rw, res, http.StatusCreated)
+		res := &response{
+			ID:    account.id.String(),
+			Name:  account.name,
+			Email: account.email,
+		}
+
+		server.Json(rw, res, http.StatusCreated)
+		return nil
+	})
 }
 
-func (h *Handler) accountsHandler(rw http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case http.MethodPost:
-		h.postAccountsHandler(rw, req)
-	}
+func (h *Handler) SetupRoutes(r *mux.Router) {
+	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts", h.createAccountsHandler())
 }
 
-func (h *Handler) SetupRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/accounts", h.Resource(h.accountsHandler, []string{http.MethodPost}))
-}
-
-func NewHandler(logger *log.Logger, db *sql.DB) *Handler {
+func NewHandler(db *sql.DB) *Handler {
 	ctrl := newController(newDatabase(db))
-	return &Handler{&server.Middleware{Log: logger}, ctrl}
+	return &Handler{ctrl}
 }

@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/accounts"
 	"github.com/wevnasc/baby-guess/db"
+	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
 )
 
@@ -24,8 +25,6 @@ func main() {
 }
 
 func run() error {
-	logger := log.New(os.Stdout, "HTTP: ", log.LstdFlags|log.Lshortfile)
-
 	database, err := db.New(&db.Connection{
 		Host:     "localhost",
 		User:     "postgres",
@@ -40,13 +39,14 @@ func run() error {
 		return err
 	}
 
-	h := accounts.NewHandler(logger, database)
-	mux := http.NewServeMux()
+	h := accounts.NewHandler(database)
+	mux := mux.NewRouter()
 
+	mux.Use(middleware.Headers)
 	h.SetupRoutes(mux)
 	srv := server.New(mux, ServerAddr)
 
-	fmt.Printf("starting server on %s\n", ServerAddr)
+	fmt.Printf("starting server on localhost:%s\n", ServerAddr)
 
 	if err := srv.ListenAndServe(); err != nil {
 		return fmt.Errorf("server failed to start: %v", err)

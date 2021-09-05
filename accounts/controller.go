@@ -2,7 +2,8 @@ package accounts
 
 import (
 	"context"
-	"errors"
+
+	"github.com/wevnasc/baby-guess/server"
 )
 
 type controller struct {
@@ -20,5 +21,5 @@ func (c *controller) create(ctx context.Context, account *account) (*account, er
 		return c.database.create(ctx, account)
 	}
 
-	return nil, errors.New("not was possible to create the account")
+	return nil, server.NewError("not was possible to create the account", server.ResourceInvalid)
 }
