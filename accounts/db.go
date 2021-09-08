@@ -2,17 +2,17 @@ package accounts
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/wevnasc/baby-guess/db"
 )
 
 type Database struct {
-	DB *sql.DB
+	DB *db.Store
 }
 
-func newDatabase(DB *sql.DB) *Database {
+func newDatabase(DB *db.Store) *Database {
 	return &Database{DB}
 }
 
@@ -46,7 +46,6 @@ func (d *Database) create(ctx context.Context, a *account) (*account, error) {
 }
 
 func (d *Database) findByEmail(ctx context.Context, email string) (*account, error) {
-
 	type FindByEmailResult struct {
 		ID    string
 		Name  string

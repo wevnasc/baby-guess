@@ -10,6 +10,7 @@ import (
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
+	"github.com/wevnasc/baby-guess/tables"
 )
 
 var (
@@ -25,7 +26,7 @@ func main() {
 }
 
 func run() error {
-	database, err := db.New(&db.Connection{
+	store, err := db.New(&db.Connection{
 		Host:     "localhost",
 		User:     "postgres",
 		Password: "postgres",
@@ -33,17 +34,18 @@ func run() error {
 		Database: "baby_guess",
 	})
 
-	defer database.Close()
+	defer store.Close()
 
 	if err != nil {
 		return err
 	}
 
-	h := accounts.NewHandler(database)
 	mux := mux.NewRouter()
-
 	mux.Use(middleware.Headers)
-	h.SetupRoutes(mux)
+
+	accounts.NewHandler(store).SetupRoutes(mux)
+	tables.NewHandler(store).SetupRoutes(mux)
+
 	srv := server.New(mux, ServerAddr)
 
 	fmt.Printf("starting server on localhost:%s\n", ServerAddr)

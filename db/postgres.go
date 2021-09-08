@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func New(c *Connection) (*sql.DB, error) {
+func New(c *Connection) (*Store, error) {
 	url := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.Host,
@@ -29,5 +29,5 @@ func New(c *Connection) (*sql.DB, error) {
 		return nil, fmt.Errorf("not was possible to connect with the database %v", err)
 	}
 
-	return db, nil
+	return &Store{db}, nil
 }
