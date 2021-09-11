@@ -7,7 +7,10 @@ type reason int
 const (
 	ResourceAlreadyExists reason = http.StatusConflict
 	ResourceInvalid              = http.StatusBadRequest
+	ResourceNotFound             = http.StatusNotFound
 	ResourceParse                = http.StatusBadRequest
+	OperationNotAllowed          = http.StatusForbidden
+	OperationError               = http.StatusBadRequest
 	URLParse                     = http.StatusBadRequest
 	UnkownError                  = http.StatusBadRequest
 )

@@ -48,8 +48,6 @@ func run() error {
 
 	srv := server.New(mux, ServerAddr)
 
-	fmt.Printf("starting server on localhost:%s\n", ServerAddr)
-
 	if err := srv.ListenAndServe(); err != nil {
 		return fmt.Errorf("server failed to start: %v", err)
 	}

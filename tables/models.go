@@ -10,22 +10,35 @@ type Status int
 
 const (
 	None     Status = 0
-	Pending         = 1
+	Selected        = 1
 	Approved        = 2
 )
+
+type owner struct {
+	id uuid.UUID
+}
+
+func (o *owner) isOwner(other *owner) bool {
+	return o.id == other.id
+}
 
 type item struct {
 	id          uuid.UUID
 	description string
-	ownerID     uuid.UUID
+	owner       *owner
 	status      Status
 }
 
+func (i *item) selectedBy(owner owner) {
+	i.status = Selected
+	i.owner = &owner
+}
+
 type table struct {
-	id      uuid.UUID
-	ownerID uuid.UUID
-	name    string
-	items   []item
+	id    uuid.UUID
+	owner *owner
+	name  string
+	items []item
 }
 
 func newTable(id uuid.UUID, name string, numberItems int) *table {
@@ -41,5 +54,5 @@ func newTable(id uuid.UUID, name string, numberItems int) *table {
 		}
 	}
 
-	return &table{name: name, ownerID: id, items: items}
+	return &table{name: name, owner: &owner{id}, items: items}
 }

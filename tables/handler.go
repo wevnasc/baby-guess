@@ -37,7 +37,7 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 		uuid, err := uuid.Parse(mux.Vars(r)["id"])
 
 		if err != nil {
-			return server.NewError("error to get account id", server.URLParse)
+			return server.NewError("error to parse account id", server.URLParse)
 		}
 
 		table := newTable(uuid, body.Name, body.Items)
@@ -56,8 +56,48 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 	})
 }
 
+func (h *Handler) selectItemHandler() http.HandlerFunc {
+
+	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+
+		accountID, err := uuid.Parse(mux.Vars(r)["account_id"])
+
+		if err != nil {
+			return server.NewError("error to parse account id", server.URLParse)
+		}
+
+		tableID, err := uuid.Parse(mux.Vars(r)["table_id"])
+
+		if err != nil {
+			return server.NewError("error to parse table id", server.URLParse)
+		}
+
+		itemID, err := uuid.Parse(mux.Vars(r)["id"])
+
+		if err != nil {
+			return server.NewError("error to parse item id", server.URLParse)
+		}
+
+		item := item{
+			owner: &owner{accountID},
+			id:    itemID,
+		}
+
+		err = h.ctrl.selectItem(r.Context(), tableID, item)
+
+		if err != nil {
+			return err
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	})
+}
+
 func (h *Handler) SetupRoutes(r *mux.Router) {
+	// TODO to use account ID inside authentication token
 	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts/{id}/tables", h.createTablesHandler())
+	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts/{account_id}/tables/{table_id}/items/{id}/selected", h.selectItemHandler())
 }
 
 func NewHandler(db *db.Store) *Handler {
