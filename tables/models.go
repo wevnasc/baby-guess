@@ -1,6 +1,7 @@
 package tables
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -29,9 +30,13 @@ type item struct {
 	status      Status
 }
 
-func (i *item) selectedBy(owner owner) {
+func (i *item) selectedBy(owner owner) error {
+	if i.status != None {
+		return errors.New("just empty items can be selected")
+	}
 	i.status = Selected
 	i.owner = &owner
+	return nil
 }
 
 type table struct {

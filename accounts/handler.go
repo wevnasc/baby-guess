@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/middleware"
@@ -23,9 +24,9 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 	}
 
 	type response struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Email string `json:"email"`
+		ID    uuid.UUID `json:"id"`
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
 	}
 
 	return middleware.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -51,7 +52,7 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 		}
 
 		res := &response{
-			ID:    account.id.String(),
+			ID:    account.id,
 			Name:  account.name,
 			Email: account.email,
 		}

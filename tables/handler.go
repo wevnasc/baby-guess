@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/middleware"
@@ -34,13 +33,7 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 			return server.NewError("error to parse body", server.ResourceParse)
 		}
 
-		uuid, err := uuid.Parse(mux.Vars(r)["id"])
-
-		if err != nil {
-			return server.NewError("error to parse account id", server.URLParse)
-		}
-
-		table := newTable(uuid, body.Name, body.Items)
+		table := newTable(server.PathUUID(r, "account_id"), body.Name, body.Items)
 		table, err = h.ctrl.create(r.Context(), table)
 
 		if err != nil {
@@ -59,31 +52,12 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 func (h *Handler) selectItemHandler() http.HandlerFunc {
 
 	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
-
-		accountID, err := uuid.Parse(mux.Vars(r)["account_id"])
-
-		if err != nil {
-			return server.NewError("error to parse account id", server.URLParse)
-		}
-
-		tableID, err := uuid.Parse(mux.Vars(r)["table_id"])
-
-		if err != nil {
-			return server.NewError("error to parse table id", server.URLParse)
-		}
-
-		itemID, err := uuid.Parse(mux.Vars(r)["id"])
-
-		if err != nil {
-			return server.NewError("error to parse item id", server.URLParse)
-		}
-
 		item := item{
-			owner: &owner{accountID},
-			id:    itemID,
+			owner: &owner{server.PathUUID(r, "account_id")},
+			id:    server.PathUUID(r, "item_id"),
 		}
 
-		err = h.ctrl.selectItem(r.Context(), tableID, item)
+		err := h.ctrl.selectItem(r.Context(), server.PathUUID(r, "table_id"), item)
 
 		if err != nil {
 			return err
@@ -95,9 +69,16 @@ func (h *Handler) selectItemHandler() http.HandlerFunc {
 }
 
 func (h *Handler) SetupRoutes(r *mux.Router) {
-	// TODO to use account ID inside authentication token
-	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts/{id}/tables", h.createTablesHandler())
-	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts/{account_id}/tables/{table_id}/items/{id}/selected", h.selectItemHandler())
+	aRouter := r.PathPrefix("/accounts/{account_id}").Subrouter()
+	aRouter.Use(middleware.ParseUUID("account_id"))
+
+	tRouter := aRouter.PathPrefix("/tables").Subrouter()
+	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
+
+	iRouter := aRouter.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
+	iRouter.Use(middleware.ParseUUID("table_id", "item_id"))
+
+	iRouter.HandleFunc("/selected", h.selectItemHandler()).Methods(http.MethodPost)
 }
 
 func NewHandler(db *db.Store) *Handler {

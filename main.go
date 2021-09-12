@@ -34,11 +34,11 @@ func run() error {
 		Database: "baby_guess",
 	})
 
-	defer store.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer store.Close()
 
 	mux := mux.NewRouter()
 	mux.Use(middleware.Headers)

@@ -37,11 +37,11 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 		return server.NewError("item not found", server.ResourceNotFound)
 	}
 
-	item.selectedBy(*selected.owner)
+	if err := item.selectedBy(*selected.owner); err != nil {
+		return server.NewError(err.Error(), server.OperationNotAllowed)
+	}
 
-	err = c.database.updateItem(ctx, item)
-
-	if err != nil {
+	if err := c.database.updateItem(ctx, item); err != nil {
 		return server.NewError("not was possible to select the item", server.OperationError)
 	}
 

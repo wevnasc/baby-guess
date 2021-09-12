@@ -20,26 +20,25 @@ func newDatabase(DB *db.Store) *Database {
 func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 
 	type CreateTableResult struct {
-		ID        string
+		ID        uuid.UUID
 		Name      string
-		AccountId string
+		AccountId uuid.UUID
 	}
 
 	type CreateItemResult struct {
-		ID          string
+		ID          uuid.UUID
 		Description string
 		Status      int
 	}
 
-	tableStmt := "insert into tables(name, account_id) values($1, $2) returning id, name, account_id"
-	itemStmt := "insert into items(description, status, table_id) values($1, $2, $3) returning id, description, status"
+	statement := "insert into tables(name, account_id) values($1, $2) returning id, name, account_id"
 
 	resultTable := &CreateTableResult{}
 	items := make([]item, len(t.items))
 
 	err := d.DB.ExecTx(ctx, func(tx *sql.Tx) error {
 
-		err := tx.QueryRowContext(ctx, tableStmt, t.name, t.owner.id).Scan(&resultTable.ID, &resultTable.Name, &resultTable.AccountId)
+		err := tx.QueryRowContext(ctx, statement, t.name, t.owner.id).Scan(&resultTable.ID, &resultTable.Name, &resultTable.AccountId)
 
 		if err != nil {
 			return fmt.Errorf("not was possible to insert the account %v", err)
@@ -47,21 +46,17 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 
 		itemResult := &CreateItemResult{}
 
+		statement = "insert into items(description, status, table_id) values($1, $2, $3) returning id, description, status"
+
 		for i, current := range t.items {
-			err := tx.QueryRowContext(ctx, itemStmt, current.description, current.status, resultTable.ID).Scan(&itemResult.ID, &itemResult.Description, &itemResult.Status)
+			err := tx.QueryRowContext(ctx, statement, current.description, current.status, resultTable.ID).Scan(&itemResult.ID, &itemResult.Description, &itemResult.Status)
 
 			if err != nil {
 				return fmt.Errorf("not was possible to insert item %v", err)
 			}
 
-			uuid, err := uuid.Parse(itemResult.ID)
-
-			if err != nil {
-				return fmt.Errorf("error to generate uuid %v", err)
-			}
-
 			items[i] = item{
-				id:          uuid,
+				id:          itemResult.ID,
 				description: itemResult.Description,
 				status:      Status(itemResult.Status),
 			}
@@ -75,22 +70,10 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 		return nil, fmt.Errorf("not was possible to create table %v", err)
 	}
 
-	tableID, err := uuid.Parse(resultTable.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("error to generate uuid %v", err)
-	}
-
-	accountID, err := uuid.Parse(resultTable.AccountId)
-
-	if err != nil {
-		return nil, fmt.Errorf("error to generate uuid %v", err)
-	}
-
 	return &table{
-		id:    tableID,
+		id:    resultTable.ID,
 		name:  resultTable.Name,
-		owner: &owner{accountID},
+		owner: &owner{resultTable.AccountId},
 		items: items,
 	}, nil
 }
@@ -98,10 +81,10 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 func (d *Database) findByItemId(ctx context.Context, tableID uuid.UUID, id uuid.UUID) (*item, error) {
 
 	type Result struct {
-		ID          string
+		ID          uuid.UUID
 		Description string
 		Status      int
-		AccountID   *string
+		AccountID   uuid.NullUUID
 	}
 
 	statement := "select id, description, status, account_id from items where id = $1 and table_id = $2"
@@ -113,34 +96,18 @@ func (d *Database) findByItemId(ctx context.Context, tableID uuid.UUID, id uuid.
 		return nil, fmt.Errorf("not was possible to find the item %v", err)
 	}
 
-	itemID, err := uuid.Parse(result.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("error to generate uuid %v", err)
-	}
-
-	var accountID uuid.UUID
-
-	if result.AccountID != nil {
-		accountID, err = uuid.Parse(*result.AccountID)
-
-		if err != nil {
-			return nil, fmt.Errorf("error to generate uuid %v", err)
-		}
-	}
-
 	return &item{
-		id:          itemID,
+		id:          result.ID,
 		description: result.Description,
 		status:      Status(result.Status),
-		owner:       &owner{accountID},
+		owner:       &owner{result.AccountID.UUID},
 	}, nil
 }
 
 func (d *Database) findTableOwnerById(ctx context.Context, tableID uuid.UUID) (*owner, error) {
 
 	type Result struct {
-		ID string
+		ID uuid.UUID
 	}
 
 	statement := "select account_id from tables where id = $1"
@@ -152,18 +119,12 @@ func (d *Database) findTableOwnerById(ctx context.Context, tableID uuid.UUID) (*
 		return nil, fmt.Errorf("not was possible to find the owner %v", err)
 	}
 
-	accountID, err := uuid.Parse(result.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("error to generate uuid %v", err)
-	}
-
-	return &owner{accountID}, nil
+	return &owner{result.ID}, nil
 }
 
 func (d *Database) updateItem(ctx context.Context, i *item) error {
 	return d.DB.ExecTx(ctx, func(t *sql.Tx) error {
-		var id string
+		var id uuid.UUID
 		err := t.QueryRowContext(ctx, "select id from items where id = $1 for update", i.id).Scan(&id)
 
 		if err != nil {
