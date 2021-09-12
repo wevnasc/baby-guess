@@ -50,16 +50,13 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 }
 
 func (h *Handler) selectItemHandler() http.HandlerFunc {
-
 	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
 			owner: newOwner(server.PathUUID(r, "account_id")),
 			id:    server.PathUUID(r, "item_id"),
 		}
 
-		err := h.ctrl.selectItem(r.Context(), server.PathUUID(r, "table_id"), item)
-
-		if err != nil {
+		if err := h.ctrl.selectItem(r.Context(), server.PathUUID(r, "table_id"), item); err != nil {
 			return err
 		}
 
@@ -69,16 +66,29 @@ func (h *Handler) selectItemHandler() http.HandlerFunc {
 }
 
 func (h *Handler) unselectItemHandler() http.HandlerFunc {
-
 	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
 			owner: newOwner(server.PathUUID(r, "account_id")),
 			id:    server.PathUUID(r, "item_id"),
 		}
 
-		err := h.ctrl.unselectItem(r.Context(), server.PathUUID(r, "table_id"), item)
+		if err := h.ctrl.unselectItem(r.Context(), server.PathUUID(r, "table_id"), item); err != nil {
+			return err
+		}
 
-		if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	})
+}
+
+func (h *Handler) approveItemHandler() http.HandlerFunc {
+	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+		if err := h.ctrl.approveItem(
+			r.Context(),
+			newOwner(server.PathUUID(r, "account_id")),
+			server.PathUUID(r, "table_id"),
+			server.PathUUID(r, "item_id"),
+		); err != nil {
 			return err
 		}
 
@@ -99,6 +109,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 
 	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
+	iRouter.HandleFunc("/approve", h.approveItemHandler()).Methods(http.MethodPost)
 }
 
 func NewHandler(db *db.Store) *Handler {

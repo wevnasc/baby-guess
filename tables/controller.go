@@ -74,3 +74,32 @@ func (c *controller) unselectItem(ctx context.Context, tableID uuid.UUID, unsele
 
 	return nil
 }
+
+func (c *controller) approveItem(ctx context.Context, owner *owner, tableID uuid.UUID, itemID uuid.UUID) error {
+
+	tableOwner, err := c.database.findTableOwnerById(ctx, tableID)
+
+	if err != nil {
+		return server.NewError("table not found", server.ResourceNotFound)
+	}
+
+	item, err := c.database.findByItemId(ctx, tableID, itemID)
+
+	if err != nil {
+		return server.NewError("item not found", server.ResourceNotFound)
+	}
+
+	if !tableOwner.isEquals(owner) {
+		return server.NewError("just the table's owner can approve an item", server.OperationNotAllowed)
+	}
+
+	if err := item.approve(); err != nil {
+		return server.NewError(err.Error(), server.OperationNotAllowed)
+	}
+
+	if err := c.database.updateItem(ctx, item); err != nil {
+		return server.NewError("not was possible to unselect the item", server.OperationError)
+	}
+
+	return nil
+}

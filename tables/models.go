@@ -48,6 +48,14 @@ func (i *item) unselect() {
 	i.owner = &owner{}
 }
 
+func (i *item) approve() error {
+	if i.status != Selected {
+		return errors.New("just selected items can be approved")
+	}
+	i.status = Approved
+	return nil
+}
+
 func (i *item) isOwner(owner *owner) bool {
 	return i.owner.isEquals(owner)
 }
