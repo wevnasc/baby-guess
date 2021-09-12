@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
-	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
 )
 
@@ -29,7 +28,7 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 		Email string    `json:"email"`
 	}
 
-	return middleware.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
 
 		var body request
 

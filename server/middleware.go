@@ -1,4 +1,4 @@
-package middleware
+package server
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/wevnasc/baby-guess/server"
 )
 
 func Headers(h http.Handler) http.Handler {
@@ -28,14 +27,14 @@ func ParseUUID(keys ...string) mux.MiddlewareFunc {
 				value, ok := vars[key]
 
 				if !ok {
-					server.NewError("not found parameter %s on the url", server.URLParse)
+					NewError("not found parameter %s on the url", URLParse)
 					return
 				}
 
 				id, err := uuid.Parse(value)
 
 				if err != nil {
-					server.NewError("error to parse account id", server.URLParse).Json(rw)
+					NewError("error to parse account id", URLParse).Json(rw)
 					return
 				}
 
@@ -57,11 +56,11 @@ func ErrorHandler(next ErrorHandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if httpError, ok := err.(*server.Error); ok {
+		if httpError, ok := err.(*Error); ok {
 			httpError.Json(rw)
 			return
 		}
 
-		server.NewError(err.Error(), server.UnkownError).Json(rw)
+		NewError(err.Error(), UnkownError).Json(rw)
 	}
 }

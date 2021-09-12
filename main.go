@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/accounts"
 	"github.com/wevnasc/baby-guess/db"
-	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/tables"
 )
@@ -41,7 +40,7 @@ func run() error {
 	defer store.Close()
 
 	mux := mux.NewRouter()
-	mux.Use(middleware.Headers)
+	mux.Use(server.Headers)
 
 	accounts.NewHandler(store).SetupRoutes(mux)
 	tables.NewHandler(store).SetupRoutes(mux)

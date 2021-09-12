@@ -6,7 +6,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
-	"github.com/wevnasc/baby-guess/middleware"
 	"github.com/wevnasc/baby-guess/server"
 )
 
@@ -24,7 +23,7 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 		ID string `json:"id"`
 	}
 
-	return middleware.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		var body request
 
 		err := json.NewDecoder(r.Body).Decode(&body)
@@ -50,7 +49,7 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 }
 
 func (h *Handler) selectItemHandler() http.HandlerFunc {
-	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
 			owner: newOwner(server.PathUUID(r, "account_id")),
 			id:    server.PathUUID(r, "item_id"),
@@ -66,7 +65,7 @@ func (h *Handler) selectItemHandler() http.HandlerFunc {
 }
 
 func (h *Handler) unselectItemHandler() http.HandlerFunc {
-	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
 			owner: newOwner(server.PathUUID(r, "account_id")),
 			id:    server.PathUUID(r, "item_id"),
@@ -82,7 +81,7 @@ func (h *Handler) unselectItemHandler() http.HandlerFunc {
 }
 
 func (h *Handler) approveItemHandler() http.HandlerFunc {
-	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		if err := h.ctrl.approveItem(
 			r.Context(),
 			newOwner(server.PathUUID(r, "account_id")),
@@ -99,13 +98,13 @@ func (h *Handler) approveItemHandler() http.HandlerFunc {
 
 func (h *Handler) SetupRoutes(r *mux.Router) {
 	aRouter := r.PathPrefix("/accounts/{account_id}").Subrouter()
-	aRouter.Use(middleware.ParseUUID("account_id"))
+	aRouter.Use(server.ParseUUID("account_id"))
 
 	tRouter := aRouter.PathPrefix("/tables").Subrouter()
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
 
 	iRouter := aRouter.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
-	iRouter.Use(middleware.ParseUUID("table_id", "item_id"))
+	iRouter.Use(server.ParseUUID("table_id", "item_id"))
 
 	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
