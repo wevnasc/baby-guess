@@ -53,11 +53,30 @@ func (h *Handler) selectItemHandler() http.HandlerFunc {
 
 	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
-			owner: &owner{server.PathUUID(r, "account_id")},
+			owner: newOwner(server.PathUUID(r, "account_id")),
 			id:    server.PathUUID(r, "item_id"),
 		}
 
 		err := h.ctrl.selectItem(r.Context(), server.PathUUID(r, "table_id"), item)
+
+		if err != nil {
+			return err
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	})
+}
+
+func (h *Handler) unselectItemHandler() http.HandlerFunc {
+
+	return middleware.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+		item := item{
+			owner: newOwner(server.PathUUID(r, "account_id")),
+			id:    server.PathUUID(r, "item_id"),
+		}
+
+		err := h.ctrl.unselectItem(r.Context(), server.PathUUID(r, "table_id"), item)
 
 		if err != nil {
 			return err
@@ -78,7 +97,8 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	iRouter := aRouter.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
 	iRouter.Use(middleware.ParseUUID("table_id", "item_id"))
 
-	iRouter.HandleFunc("/selected", h.selectItemHandler()).Methods(http.MethodPost)
+	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
+	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
 }
 
 func NewHandler(db *db.Store) *Handler {

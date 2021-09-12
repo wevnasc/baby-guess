@@ -22,7 +22,7 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 	type CreateTableResult struct {
 		ID        uuid.UUID
 		Name      string
-		AccountId uuid.UUID
+		AccountId uuid.NullUUID
 	}
 
 	type CreateItemResult struct {
@@ -100,14 +100,14 @@ func (d *Database) findByItemId(ctx context.Context, tableID uuid.UUID, id uuid.
 		id:          result.ID,
 		description: result.Description,
 		status:      Status(result.Status),
-		owner:       &owner{result.AccountID.UUID},
+		owner:       &owner{result.AccountID},
 	}, nil
 }
 
 func (d *Database) findTableOwnerById(ctx context.Context, tableID uuid.UUID) (*owner, error) {
 
 	type Result struct {
-		ID uuid.UUID
+		ID uuid.NullUUID
 	}
 
 	statement := "select account_id from tables where id = $1"

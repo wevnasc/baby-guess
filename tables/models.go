@@ -16,10 +16,14 @@ const (
 )
 
 type owner struct {
-	id uuid.UUID
+	id uuid.NullUUID
 }
 
-func (o *owner) isOwner(other *owner) bool {
+func newOwner(id uuid.UUID) *owner {
+	return &owner{uuid.NullUUID{id, true}}
+}
+
+func (o *owner) isEquals(other *owner) bool {
 	return o.id == other.id
 }
 
@@ -37,6 +41,15 @@ func (i *item) selectedBy(owner owner) error {
 	i.status = Selected
 	i.owner = &owner
 	return nil
+}
+
+func (i *item) unselect() {
+	i.status = None
+	i.owner = &owner{}
+}
+
+func (i *item) isOwner(owner *owner) bool {
+	return i.owner.isEquals(owner)
 }
 
 type table struct {
@@ -59,5 +72,5 @@ func newTable(id uuid.UUID, name string, numberItems int) *table {
 		}
 	}
 
-	return &table{name: name, owner: &owner{id}, items: items}
+	return &table{name: name, owner: newOwner(id), items: items}
 }

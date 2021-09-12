@@ -27,7 +27,7 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 		return server.NewError("table not found", server.ResourceNotFound)
 	}
 
-	if owner.isOwner(selected.owner) {
+	if owner.isEquals(selected.owner) {
 		return server.NewError("the table's owner can't select an item", server.OperationNotAllowed)
 	}
 
@@ -43,6 +43,33 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 
 	if err := c.database.updateItem(ctx, item); err != nil {
 		return server.NewError("not was possible to select the item", server.OperationError)
+	}
+
+	return nil
+}
+
+func (c *controller) unselectItem(ctx context.Context, tableID uuid.UUID, unselected item) error {
+
+	owner, err := c.database.findTableOwnerById(ctx, tableID)
+
+	if err != nil {
+		return server.NewError("table not found", server.ResourceNotFound)
+	}
+
+	item, err := c.database.findByItemId(ctx, tableID, unselected.id)
+
+	if err != nil {
+		return server.NewError("item not found", server.ResourceNotFound)
+	}
+
+	if !(owner.isEquals(unselected.owner) || item.isOwner(unselected.owner)) {
+		return server.NewError("just the table's owner or the item's owner can unselect the item", server.OperationNotAllowed)
+	}
+
+	item.unselect()
+
+	if err := c.database.updateItem(ctx, item); err != nil {
+		return server.NewError("not was possible to unselect the item", server.OperationError)
 	}
 
 	return nil
