@@ -47,15 +47,16 @@ func (d *Database) create(ctx context.Context, a *account) (*account, error) {
 
 func (d *Database) findByEmail(ctx context.Context, email string) (*account, error) {
 	type FindByEmailResult struct {
-		ID    string
-		Name  string
-		Email string
+		ID       string
+		Name     string
+		Email    string
+		Password string
 	}
 
-	statement := "select id, name, email from accounts where email = $1"
+	statement := "select id, name, email, password from accounts where email = $1"
 
 	result := &FindByEmailResult{}
-	err := d.DB.QueryRowContext(ctx, statement, email).Scan(&result.ID, &result.Name, &result.Email)
+	err := d.DB.QueryRowContext(ctx, statement, email).Scan(&result.ID, &result.Name, &result.Email, &result.Password)
 
 	if err != nil {
 		return nil, fmt.Errorf("not was possible to find the account %v", err)
@@ -68,8 +69,9 @@ func (d *Database) findByEmail(ctx context.Context, email string) (*account, err
 	}
 
 	return &account{
-		id:    uuid,
-		name:  result.Name,
-		email: result.Email,
+		id:       uuid,
+		name:     result.Name,
+		email:    result.Email,
+		password: result.Password,
 	}, nil
 }

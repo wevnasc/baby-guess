@@ -3,12 +3,15 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
 )
+
+const secret string = "secret"
 
 type Handler struct {
 	ctrl *controller
@@ -61,8 +64,41 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 	})
 }
 
+func (h *Handler) loginHandler() http.HandlerFunc {
+
+	type response struct {
+		Token string `json:"token"`
+	}
+
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		authorization := r.Header.Get("Authorization")
+
+		credentials, err := basicAuth(authorization)
+
+		if err != nil {
+			return server.NewError(err.Error(), server.OperationError)
+		}
+
+		account, err := h.ctrl.login(r.Context(), credentials)
+
+		if err != nil {
+			return err
+		}
+
+		token, err := authToken(*account, secret, time.Hour*24)
+
+		if err != nil {
+			return server.NewError("not was possible to authenticate the account", server.ResourceInvalid)
+		}
+
+		server.Json(rw, &response{Token: token}, http.StatusOK)
+		return nil
+	})
+}
+
 func (h *Handler) SetupRoutes(r *mux.Router) {
 	r.Methods(http.MethodPost).Subrouter().HandleFunc("/accounts", h.createAccountsHandler())
+	r.Methods(http.MethodGet).Subrouter().HandleFunc("/login", h.loginHandler())
 }
 
 func NewHandler(db *db.Store) *Handler {

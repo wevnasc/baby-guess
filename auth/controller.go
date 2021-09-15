@@ -23,3 +23,17 @@ func (c *controller) create(ctx context.Context, account *account) (*account, er
 
 	return nil, server.NewError("not was possible to create the account", server.ResourceInvalid)
 }
+
+func (c *controller) login(ctx context.Context, credentials *credentials) (*account, error) {
+	account, err := c.database.findByEmail(ctx, credentials.email)
+
+	if err != nil {
+		return nil, server.NewError("not was possible to authenticate the account", server.ResourceInvalid)
+	}
+
+	if !account.comparerPassword(credentials.password) {
+		return nil, server.NewError("not was possible to authenticate the account", server.ResourceInvalid)
+	}
+
+	return account, nil
+}

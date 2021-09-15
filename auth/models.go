@@ -28,7 +28,7 @@ func newAccount(name string, password string, email string) (*account, error) {
 	}, nil
 }
 
-func (a *account) comparerPassword(hashed string, raw string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(raw))
+func (a *account) comparerPassword(raw string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(a.password), []byte(raw))
 	return err == nil
 }
