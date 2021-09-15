@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/wevnasc/baby-guess/accounts"
+	"github.com/wevnasc/baby-guess/auth"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/tables"
@@ -42,7 +42,7 @@ func run() error {
 	mux := mux.NewRouter()
 	mux.Use(server.Headers)
 
-	accounts.NewHandler(store).SetupRoutes(mux)
+	auth.NewHandler(store).SetupRoutes(mux)
 	tables.NewHandler(store).SetupRoutes(mux)
 
 	srv := server.New(mux, ServerAddr)
