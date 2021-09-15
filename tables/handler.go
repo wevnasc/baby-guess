@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
@@ -44,6 +45,58 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 		}
 
 		server.Json(rw, res, http.StatusCreated)
+		return nil
+	})
+}
+
+func (h *Handler) allTablesHandler() http.HandlerFunc {
+
+	type itemResponse struct {
+		ID          uuid.UUID  `json:"id"`
+		Description string     `json:"description"`
+		AccountID   *uuid.UUID `json:"account_id,omitempty"`
+	}
+
+	type tablesResponse struct {
+		ID    uuid.UUID      `json:"id"`
+		Name  string         `json:"name"`
+		Items []itemResponse `json:"items"`
+	}
+
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		tables, err := h.ctrl.all(r.Context(), server.PathUUID(r, "account_id"))
+
+		if err != nil {
+			return err
+		}
+
+		var tt = []tablesResponse{}
+
+		for _, table := range tables {
+
+			var ii = []itemResponse{}
+
+			for _, item := range table.items {
+
+				i := itemResponse{
+					ID:          item.id,
+					Description: item.description,
+					AccountID:   item.owner.nullableID(),
+				}
+
+				ii = append(ii, i)
+			}
+
+			t := tablesResponse{
+				ID:    table.id,
+				Name:  table.name,
+				Items: ii,
+			}
+
+			tt = append(tt, t)
+		}
+
+		server.Json(rw, tt, http.StatusOK)
 		return nil
 	})
 }
@@ -102,6 +155,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 
 	tRouter := aRouter.PathPrefix("/tables").Subrouter()
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
+	tRouter.HandleFunc("", h.allTablesHandler()).Methods(http.MethodGet)
 
 	iRouter := aRouter.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
 	iRouter.Use(server.ParseUUID("table_id", "item_id"))

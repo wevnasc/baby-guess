@@ -19,9 +19,13 @@ func (c *controller) create(ctx context.Context, table *table) (*table, error) {
 	return c.database.create(ctx, table)
 }
 
+func (c *controller) all(ctx context.Context, accountID uuid.UUID) ([]table, error) {
+	return c.database.findAllByOwnerID(ctx, accountID)
+}
+
 func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected item) error {
 
-	owner, err := c.database.findTableOwnerById(ctx, tableID)
+	owner, err := c.database.findTableOwnerByID(ctx, tableID)
 
 	if err != nil {
 		return server.NewError("table not found", server.ResourceNotFound)
@@ -31,7 +35,7 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 		return server.NewError("the table's owner can't select an item", server.OperationNotAllowed)
 	}
 
-	item, err := c.database.findByItemId(ctx, tableID, selected.id)
+	item, err := c.database.findByItemID(ctx, tableID, selected.id)
 
 	if err != nil {
 		return server.NewError("item not found", server.ResourceNotFound)
@@ -50,13 +54,13 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 
 func (c *controller) unselectItem(ctx context.Context, tableID uuid.UUID, unselected item) error {
 
-	owner, err := c.database.findTableOwnerById(ctx, tableID)
+	owner, err := c.database.findTableOwnerByID(ctx, tableID)
 
 	if err != nil {
 		return server.NewError("table not found", server.ResourceNotFound)
 	}
 
-	item, err := c.database.findByItemId(ctx, tableID, unselected.id)
+	item, err := c.database.findByItemID(ctx, tableID, unselected.id)
 
 	if err != nil {
 		return server.NewError("item not found", server.ResourceNotFound)
@@ -77,13 +81,13 @@ func (c *controller) unselectItem(ctx context.Context, tableID uuid.UUID, unsele
 
 func (c *controller) approveItem(ctx context.Context, owner *owner, tableID uuid.UUID, itemID uuid.UUID) error {
 
-	tableOwner, err := c.database.findTableOwnerById(ctx, tableID)
+	tableOwner, err := c.database.findTableOwnerByID(ctx, tableID)
 
 	if err != nil {
 		return server.NewError("table not found", server.ResourceNotFound)
 	}
 
-	item, err := c.database.findByItemId(ctx, tableID, itemID)
+	item, err := c.database.findByItemID(ctx, tableID, itemID)
 
 	if err != nil {
 		return server.NewError("item not found", server.ResourceNotFound)

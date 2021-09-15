@@ -20,16 +20,25 @@ type owner struct {
 }
 
 func newOwner(id uuid.UUID) *owner {
-	return &owner{uuid.NullUUID{id, true}}
+	return &owner{uuid.NullUUID{UUID: id, Valid: true}}
 }
 
 func (o *owner) isEquals(other *owner) bool {
 	return o.id == other.id
 }
 
+func (o *owner) nullableID() *uuid.UUID {
+	if o.id.Valid {
+		return &o.id.UUID
+	}
+
+	return nil
+}
+
 type item struct {
 	id          uuid.UUID
 	description string
+	luckNumber  int
 	owner       *owner
 	status      Status
 }
@@ -72,11 +81,13 @@ func newTable(id uuid.UUID, name string, numberItems int) *table {
 	items := make([]item, numberItems)
 
 	for i := 0; i < numberItems; i++ {
-		desc := fmt.Sprintf("%d", i+1)
+		key := i + 1
+		desc := fmt.Sprintf("%d", key)
 
 		items[i] = item{
 			description: desc,
 			status:      None,
+			luckNumber:  key,
 		}
 	}
 

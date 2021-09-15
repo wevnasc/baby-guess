@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS tables (
 CREATE TABLE IF NOT EXISTS items (
     id uuid DEFAULT uuid_generate_v4(),
     description VARCHAR NOT NULL,
+    luck_number INT NOT NULL,
     account_id UUID,
     table_id UUID,
     status INT,

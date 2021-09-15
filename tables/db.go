@@ -17,6 +17,113 @@ func newDatabase(DB *db.Store) *Database {
 	return &Database{DB}
 }
 
+func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]table, error) {
+
+	type TableResult struct {
+		ID        uuid.UUID
+		Name      string
+		AccountID uuid.NullUUID
+	}
+
+	tables := []table{}
+
+	statement := "select id, name, account_id from tables where account_id = $1"
+
+	tt := []TableResult{}
+
+	rows, err := d.DB.QueryContext(ctx, statement, ownerID)
+
+	if err != nil {
+		return nil, fmt.Errorf("not was possible to query tables %v", err)
+	}
+
+	for rows.Next() {
+		t := &TableResult{}
+
+		if err := rows.Scan(&t.ID, &t.Name, &t.AccountID); err != nil {
+			return nil, err
+		}
+
+		tt = append(tt, *t)
+	}
+
+	for _, t := range tt {
+
+		items, err := d.findAllItemsByTableID(ctx, t.ID)
+
+		if err != nil {
+			return nil, err
+		}
+
+		current := table{
+			id:    t.ID,
+			name:  t.Name,
+			owner: &owner{t.AccountID},
+			items: items,
+		}
+
+		tables = append(tables, current)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tables, nil
+
+}
+
+func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID) ([]item, error) {
+
+	type ItemResult struct {
+		ID          uuid.UUID
+		Description string
+		LuckNumber  int
+		Status      int
+		AccountID   uuid.NullUUID
+	}
+
+	items := []item{}
+
+	statement := "select id, description, status, luck_number, account_id from items where table_id = $1 order by luck_number"
+
+	ii := []ItemResult{}
+
+	rows, err := d.DB.QueryContext(ctx, statement, tableID)
+
+	if err != nil {
+		return nil, fmt.Errorf("not was possible to query items %v", err)
+	}
+
+	for rows.Next() {
+		i := ItemResult{}
+
+		if err := rows.Scan(&i.ID, &i.Description, &i.Status, &i.LuckNumber, &i.AccountID); err != nil {
+			return nil, err
+		}
+
+		ii = append(ii, i)
+	}
+
+	for _, i := range ii {
+		current := item{
+			id:          i.ID,
+			description: i.Description,
+			status:      Status(i.Status),
+			luckNumber:  i.LuckNumber,
+			owner:       &owner{i.AccountID},
+		}
+		items = append(items, current)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+
+}
+
 func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 
 	type CreateTableResult struct {
@@ -28,6 +135,7 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 	type CreateItemResult struct {
 		ID          uuid.UUID
 		Description string
+		LuckNumber  int
 		Status      int
 	}
 
@@ -46,10 +154,10 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 
 		itemResult := &CreateItemResult{}
 
-		statement = "insert into items(description, status, table_id) values($1, $2, $3) returning id, description, status"
+		statement = "insert into items(description, status, luck_number, table_id) values($1, $2, $3, $4) returning id, description, status"
 
 		for i, current := range t.items {
-			err := tx.QueryRowContext(ctx, statement, current.description, current.status, resultTable.ID).Scan(&itemResult.ID, &itemResult.Description, &itemResult.Status)
+			err := tx.QueryRowContext(ctx, statement, current.description, current.status, current.luckNumber, resultTable.ID).Scan(&itemResult.ID, &itemResult.Description, &itemResult.Status)
 
 			if err != nil {
 				return fmt.Errorf("not was possible to insert item %v", err)
@@ -58,6 +166,7 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 			items[i] = item{
 				id:          itemResult.ID,
 				description: itemResult.Description,
+				luckNumber:  itemResult.LuckNumber,
 				status:      Status(itemResult.Status),
 			}
 		}
@@ -78,19 +187,20 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 	}, nil
 }
 
-func (d *Database) findByItemId(ctx context.Context, tableID uuid.UUID, id uuid.UUID) (*item, error) {
+func (d *Database) findByItemID(ctx context.Context, tableID uuid.UUID, id uuid.UUID) (*item, error) {
 
 	type Result struct {
 		ID          uuid.UUID
 		Description string
 		Status      int
+		LuckNumber  int
 		AccountID   uuid.NullUUID
 	}
 
-	statement := "select id, description, status, account_id from items where id = $1 and table_id = $2"
+	statement := "select id, description, status, luck_number, account_id from items where id = $1 and table_id = $2"
 
 	result := &Result{}
-	err := d.DB.QueryRowContext(ctx, statement, id, tableID).Scan(&result.ID, &result.Description, &result.Status, &result.AccountID)
+	err := d.DB.QueryRowContext(ctx, statement, id, tableID).Scan(&result.ID, &result.Description, &result.Status, &result.LuckNumber, &result.AccountID)
 
 	if err != nil {
 		return nil, fmt.Errorf("not was possible to find the item %v", err)
@@ -99,12 +209,13 @@ func (d *Database) findByItemId(ctx context.Context, tableID uuid.UUID, id uuid.
 	return &item{
 		id:          result.ID,
 		description: result.Description,
+		luckNumber:  result.LuckNumber,
 		status:      Status(result.Status),
 		owner:       &owner{result.AccountID},
 	}, nil
 }
 
-func (d *Database) findTableOwnerById(ctx context.Context, tableID uuid.UUID) (*owner, error) {
+func (d *Database) findTableOwnerByID(ctx context.Context, tableID uuid.UUID) (*owner, error) {
 
 	type Result struct {
 		ID uuid.NullUUID
@@ -131,9 +242,9 @@ func (d *Database) updateItem(ctx context.Context, i *item) error {
 			return err
 		}
 
-		statement := "update items set description=$2, status=$3, account_id=$4 where id = $1"
+		statement := "update items set description=$2, status=$3, luckNumber=$4 account_id=$5 where id = $1"
 
-		_, err = t.ExecContext(ctx, statement, i.id, i.description, i.status, i.owner.id)
+		_, err = t.ExecContext(ctx, statement, i.id, i.description, i.status, i.luckNumber, i.owner.id)
 
 		if err != nil {
 			return err
