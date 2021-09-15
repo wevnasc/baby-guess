@@ -33,7 +33,12 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 			return server.NewError("error to parse body", server.ResourceParse)
 		}
 
-		table := newTable(server.PathUUID(r, "account_id"), body.Name, body.Items)
+		table, err := newTable(server.PathUUID(r, "account_id"), body.Name, body.Items)
+
+		if err != nil {
+			return server.NewError(err.Error(), server.ResourceInvalid)
+		}
+
 		table, err = h.ctrl.create(r.Context(), table)
 
 		if err != nil {

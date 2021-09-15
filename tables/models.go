@@ -15,6 +15,11 @@ const (
 	Approved        = 2
 )
 
+const (
+	MaxItems = 500
+	MinItems = 30
+)
+
 type owner struct {
 	id uuid.NullUUID
 }
@@ -76,7 +81,15 @@ type table struct {
 	items []item
 }
 
-func newTable(id uuid.UUID, name string, numberItems int) *table {
+func newTable(id uuid.UUID, name string, numberItems int) (*table, error) {
+
+	if numberItems < MinItems {
+		return nil, errors.New("items out of range, the minimum of items should be at least 30")
+	}
+
+	if numberItems > MaxItems {
+		return nil, errors.New("items out of range, too many items the maximum of items is 500")
+	}
 
 	items := make([]item, numberItems)
 
@@ -91,5 +104,5 @@ func newTable(id uuid.UUID, name string, numberItems int) *table {
 		}
 	}
 
-	return &table{name: name, owner: newOwner(id), items: items}
+	return &table{name: name, owner: newOwner(id), items: items}, nil
 }
