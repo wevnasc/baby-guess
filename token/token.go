@@ -11,8 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const Secret string = "secret"
-
 const (
 	Bearer string = "Bearer"
 	Basic         = "Basic"

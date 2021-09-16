@@ -7,13 +7,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/token"
 )
 
 type Handler struct {
-	ctrl *controller
+	ctrl   *controller
+	config *config.Config
 }
 
 func (h *Handler) createAccountsHandler() http.HandlerFunc {
@@ -64,7 +66,6 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 }
 
 func (h *Handler) loginHandler() http.HandlerFunc {
-
 	type response struct {
 		Token string `json:"token"`
 	}
@@ -84,7 +85,7 @@ func (h *Handler) loginHandler() http.HandlerFunc {
 			return err
 		}
 
-		token, err := token.NewAuth(account.id, token.Secret, time.Hour*24)
+		token, err := token.NewAuth(account.id, h.config.Secret, time.Hour*24)
 
 		if err != nil {
 			return server.NewError("not was possible to authenticate the account", server.ResourceInvalid)
@@ -100,7 +101,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	r.Methods(http.MethodGet).Subrouter().HandleFunc("/login", h.loginHandler())
 }
 
-func NewHandler(db *db.Store) *Handler {
+func NewHandler(db *db.Store, config *config.Config) *Handler {
 	ctrl := newController(newDatabase(db))
-	return &Handler{ctrl}
+	return &Handler{ctrl, config}
 }

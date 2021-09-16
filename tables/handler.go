@@ -6,12 +6,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
 )
 
 type Handler struct {
-	ctrl *controller
+	ctrl   *controller
+	config *config.Config
 }
 
 func (h *Handler) createTablesHandler() http.HandlerFunc {
@@ -180,23 +182,23 @@ func (h *Handler) drawHandler() http.HandlerFunc {
 
 func (h *Handler) SetupRoutes(r *mux.Router) {
 	tRouter := r.PathPrefix("/tables").Subrouter()
-	tRouter.Use(server.Authenticated)
+	tRouter.Use(server.Auth(h.config))
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
 	tRouter.HandleFunc("", h.allTablesHandler()).Methods(http.MethodGet)
 
 	tdRouter := r.PathPrefix("/tables/{table_id}").Subrouter()
-	tdRouter.Use(server.Authenticated, server.ParseUUID("table_id"))
+	tdRouter.Use(server.Auth(h.config), server.ParseUUID("table_id"))
 	tdRouter.HandleFunc("/draw", h.drawHandler()).Methods(http.MethodPost)
 
 	iRouter := r.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
-	iRouter.Use(server.Authenticated, server.ParseUUID("table_id", "item_id"))
+	iRouter.Use(server.Auth(h.config), server.ParseUUID("table_id", "item_id"))
 
 	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/approve", h.approveItemHandler()).Methods(http.MethodPost)
 }
 
-func NewHandler(db *db.Store) *Handler {
+func NewHandler(db *db.Store, config *config.Config) *Handler {
 	ctrl := newController(newDatabase(db))
-	return &Handler{ctrl}
+	return &Handler{ctrl, config}
 }

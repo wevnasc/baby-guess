@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/token"
 )
 
@@ -66,19 +67,21 @@ func ErrorHandler(next ErrorHandlerFunc) http.HandlerFunc {
 	}
 }
 
-func Authenticated(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		authorization := r.Header.Get("Authorization")
+func Auth(config *config.Config) mux.MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			authorization := r.Header.Get("Authorization")
 
-		accountID, err := token.Auth(authorization, token.Secret)
+			accountID, err := token.Auth(authorization, config.Secret)
 
-		if err != nil {
-			NewError("account unauthorized", AccountUnauthorized).Json(rw)
-			return
-		}
+			if err != nil {
+				NewError("account unauthorized", AccountUnauthorized).Json(rw)
+				return
+			}
 
-		ctx := context.WithValue(r.Context(), "account_id", accountID)
+			ctx := context.WithValue(r.Context(), "account_id", accountID)
 
-		h.ServeHTTP(rw, r.WithContext(ctx))
-	})
+			h.ServeHTTP(rw, r.WithContext(ctx))
+		})
+	}
 }

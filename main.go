@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/auth"
+	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/tables"
@@ -14,6 +15,7 @@ import (
 
 var (
 	ServerAddr = os.Getenv("HTTP_SERVER_ADDR")
+	Secret     = os.Getenv("AUTH_SECRET")
 )
 
 func main() {
@@ -39,11 +41,13 @@ func run() error {
 
 	defer store.Close()
 
+	config := config.New(Secret)
+
 	mux := mux.NewRouter()
 	mux.Use(server.Headers)
 
-	auth.NewHandler(store).SetupRoutes(mux)
-	tables.NewHandler(store).SetupRoutes(mux)
+	auth.NewHandler(store, config).SetupRoutes(mux)
+	tables.NewHandler(store, config).SetupRoutes(mux)
 
 	srv := server.New(mux, ServerAddr)
 
