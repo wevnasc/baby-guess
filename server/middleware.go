@@ -6,7 +6,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/wevnasc/baby-guess/token"
 )
+
+type ErrorHandlerFunc = func(w http.ResponseWriter, r *http.Request) error
 
 func Headers(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -46,8 +49,6 @@ func ParseUUID(keys ...string) mux.MiddlewareFunc {
 	}
 }
 
-type ErrorHandlerFunc = func(w http.ResponseWriter, r *http.Request) error
-
 func ErrorHandler(next ErrorHandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		err := next(rw, r)
@@ -63,4 +64,21 @@ func ErrorHandler(next ErrorHandlerFunc) http.HandlerFunc {
 
 		NewError(err.Error(), UnkownError).Json(rw)
 	}
+}
+
+func Authenticated(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		authorization := r.Header.Get("Authorization")
+
+		accountID, err := token.Auth(authorization, token.Secret)
+
+		if err != nil {
+			NewError("account unauthorized", AccountUnauthorized).Json(rw)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "account_id", accountID)
+
+		h.ServeHTTP(rw, r.WithContext(ctx))
+	})
 }

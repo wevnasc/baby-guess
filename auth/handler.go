@@ -9,9 +9,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/db"
 	"github.com/wevnasc/baby-guess/server"
+	"github.com/wevnasc/baby-guess/token"
 )
-
-const secret string = "secret"
 
 type Handler struct {
 	ctrl *controller
@@ -73,7 +72,7 @@ func (h *Handler) loginHandler() http.HandlerFunc {
 	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		authorization := r.Header.Get("Authorization")
 
-		credentials, err := basicAuth(authorization)
+		credentials, err := token.BasicAuth(authorization)
 
 		if err != nil {
 			return server.NewError(err.Error(), server.OperationError)
@@ -85,7 +84,7 @@ func (h *Handler) loginHandler() http.HandlerFunc {
 			return err
 		}
 
-		token, err := authToken(*account, secret, time.Hour*24)
+		token, err := token.NewAuth(account.id, token.Secret, time.Hour*24)
 
 		if err != nil {
 			return server.NewError("not was possible to authenticate the account", server.ResourceInvalid)

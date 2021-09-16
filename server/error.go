@@ -10,6 +10,7 @@ const (
 	ResourceNotFound             = http.StatusNotFound
 	ResourceParse                = http.StatusBadRequest
 	OperationNotAllowed          = http.StatusForbidden
+	AccountUnauthorized          = http.StatusUnauthorized
 	OperationError               = http.StatusBadRequest
 	URLParse                     = http.StatusBadRequest
 	UnkownError                  = http.StatusBadRequest

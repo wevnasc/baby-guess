@@ -69,7 +69,7 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 	}
 
 	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		tables, err := h.ctrl.all(r.Context(), server.PathUUID(r, "account_id"))
+		tables, err := h.ctrl.all(r.Context(), server.AccountUUID(r))
 
 		if err != nil {
 			return err
@@ -109,7 +109,7 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 func (h *Handler) selectItemHandler() http.HandlerFunc {
 	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
-			owner: newOwner(server.PathUUID(r, "account_id")),
+			owner: newOwner(server.AccountUUID(r)),
 			id:    server.PathUUID(r, "item_id"),
 		}
 
@@ -125,7 +125,7 @@ func (h *Handler) selectItemHandler() http.HandlerFunc {
 func (h *Handler) unselectItemHandler() http.HandlerFunc {
 	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		item := item{
-			owner: newOwner(server.PathUUID(r, "account_id")),
+			owner: newOwner(server.AccountUUID(r)),
 			id:    server.PathUUID(r, "item_id"),
 		}
 
@@ -142,7 +142,7 @@ func (h *Handler) approveItemHandler() http.HandlerFunc {
 	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
 		if err := h.ctrl.approveItem(
 			r.Context(),
-			newOwner(server.PathUUID(r, "account_id")),
+			newOwner(server.AccountUUID(r)),
 			server.PathUUID(r, "table_id"),
 			server.PathUUID(r, "item_id"),
 		); err != nil {
@@ -155,15 +155,13 @@ func (h *Handler) approveItemHandler() http.HandlerFunc {
 }
 
 func (h *Handler) SetupRoutes(r *mux.Router) {
-	aRouter := r.PathPrefix("/accounts/{account_id}").Subrouter()
-	aRouter.Use(server.ParseUUID("account_id"))
-
-	tRouter := aRouter.PathPrefix("/tables").Subrouter()
+	tRouter := r.PathPrefix("/tables").Subrouter()
+	tRouter.Use(server.Authenticated)
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
 	tRouter.HandleFunc("", h.allTablesHandler()).Methods(http.MethodGet)
 
-	iRouter := aRouter.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
-	iRouter.Use(server.ParseUUID("table_id", "item_id"))
+	iRouter := r.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
+	iRouter.Use(server.Authenticated, server.ParseUUID("table_id", "item_id"))
 
 	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
