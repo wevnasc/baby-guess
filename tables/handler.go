@@ -154,11 +154,39 @@ func (h *Handler) approveItemHandler() http.HandlerFunc {
 	})
 }
 
+func (h *Handler) drawHandler() http.HandlerFunc {
+
+	type response struct {
+		ID        uuid.UUID  `json:"id"`
+		AccountID *uuid.UUID `json:"account_id,omitempty"`
+	}
+
+	return server.ErrorHandler(func(w http.ResponseWriter, r *http.Request) error {
+		item, err := h.ctrl.draw(
+			r.Context(),
+			newOwner(server.AccountUUID(r)),
+			server.PathUUID(r, "table_id"),
+		)
+
+		if err != nil {
+			return err
+		}
+
+		server.Json(w, response{ID: item.id, AccountID: item.owner.nullableID()}, http.StatusOK)
+		return nil
+	})
+
+}
+
 func (h *Handler) SetupRoutes(r *mux.Router) {
 	tRouter := r.PathPrefix("/tables").Subrouter()
 	tRouter.Use(server.Authenticated)
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
 	tRouter.HandleFunc("", h.allTablesHandler()).Methods(http.MethodGet)
+
+	tdRouter := r.PathPrefix("/tables/{table_id}").Subrouter()
+	tdRouter.Use(server.Authenticated, server.ParseUUID("table_id"))
+	tdRouter.HandleFunc("/draw", h.drawHandler()).Methods(http.MethodPost)
 
 	iRouter := r.PathPrefix("/tables/{table_id}/items/{item_id}").Subrouter()
 	iRouter.Use(server.Authenticated, server.ParseUUID("table_id", "item_id"))

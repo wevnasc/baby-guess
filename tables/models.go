@@ -3,6 +3,8 @@ package tables
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -44,6 +46,7 @@ type item struct {
 	id          uuid.UUID
 	description string
 	luckNumber  int
+	winner      bool
 	owner       *owner
 	status      Status
 }
@@ -105,4 +108,42 @@ func newTable(id uuid.UUID, name string, numberItems int) (*table, error) {
 	}
 
 	return &table{name: name, owner: newOwner(id), items: items}, nil
+}
+
+func (t *table) isOwner(other *owner) bool {
+	return t.owner.isEquals(other)
+}
+
+func (t *table) winner() *item {
+	for _, item := range t.items {
+		if item.winner {
+			return &item
+		}
+	}
+
+	return nil
+}
+
+func (t *table) drawWinner() (*item, error) {
+	for _, item := range t.items {
+		if item.status != Approved {
+			return nil, errors.New("all item should be approved before draw")
+		}
+	}
+
+	if t.winner() != nil {
+		return nil, errors.New("error to draw, winner already exists")
+	}
+
+	rand.Seed(time.Now().Unix())
+	n := rand.Intn(len(t.items)-1) + 1
+
+	for _, item := range t.items {
+		if item.luckNumber == n {
+			item.winner = true
+			return &item, nil
+		}
+	}
+
+	return nil, errors.New("not was possible to draw a number")
 }

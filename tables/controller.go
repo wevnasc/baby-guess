@@ -107,3 +107,28 @@ func (c *controller) approveItem(ctx context.Context, owner *owner, tableID uuid
 
 	return nil
 }
+
+func (c *controller) draw(ctx context.Context, owner *owner, tableID uuid.UUID) (*item, error) {
+
+	table, err := c.database.findByID(ctx, tableID)
+
+	if err != nil {
+		return nil, server.NewError("table not found", server.ResourceNotFound)
+	}
+
+	if !table.isOwner(owner) {
+		return nil, server.NewError("just the table's owner can draw a winner", server.OperationNotAllowed)
+	}
+
+	item, err := table.drawWinner()
+
+	if err != nil {
+		return nil, server.NewError(err.Error(), server.OperationError)
+	}
+
+	if err := c.database.updateItem(ctx, item); err != nil {
+		return nil, server.NewError(err.Error(), server.OperationError)
+	}
+
+	return item, nil
+}

@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
 )
 
 type Connection struct {
@@ -25,13 +24,23 @@ func (store *Store) ExecTx(ctx context.Context, fn func(*sql.Tx) error) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			err = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	if err != nil {
+		return err
+	}
+
 	err = fn(tx)
 
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			return fmt.Errorf("tx err: %v, rb err: %v", err, err)
-		}
+		return err
 	}
 
-	return tx.Commit()
+	return nil
 }
