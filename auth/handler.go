@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
+	"github.com/wevnasc/baby-guess/email"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/token"
 )
@@ -101,7 +102,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	r.Methods(http.MethodGet).Subrouter().HandleFunc("/login", h.loginHandler())
 }
 
-func NewHandler(db *db.Store, config *config.Config) *Handler {
-	ctrl := newController(newDatabase(db))
+func NewHandler(db *db.Store, config *config.Config, email *email.Connection) *Handler {
+	ctrl := newController(newDatabase(db), email)
 	return &Handler{ctrl, config}
 }

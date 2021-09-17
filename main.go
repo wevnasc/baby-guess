@@ -9,6 +9,7 @@ import (
 	"github.com/wevnasc/baby-guess/auth"
 	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
+	"github.com/wevnasc/baby-guess/email"
 	"github.com/wevnasc/baby-guess/server"
 	"github.com/wevnasc/baby-guess/tables"
 )
@@ -41,12 +42,19 @@ func run() error {
 
 	defer store.Close()
 
+	email := email.NewConnection(
+		"smtp.gmail.com",
+		"587",
+		"weverson.sn@gmail.com",
+		"",
+	)
+
 	config := config.New(Secret)
 
 	mux := mux.NewRouter()
 	mux.Use(server.Headers)
 
-	auth.NewHandler(store, config).SetupRoutes(mux)
+	auth.NewHandler(store, config, email).SetupRoutes(mux)
 	tables.NewHandler(store, config).SetupRoutes(mux)
 
 	srv := server.New(mux, ServerAddr)

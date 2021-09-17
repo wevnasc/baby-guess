@@ -1,0 +1,2 @@
+Olá {name}
+Bem-vindo a Nato, o jeito mas fácil de participar de um chá rifa sem sair de casa.
