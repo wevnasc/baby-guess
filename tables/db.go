@@ -58,7 +58,7 @@ func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]t
 		current := table{
 			id:    t.ID,
 			name:  t.Name,
-			owner: &owner{t.AccountID},
+			owner: &owner{id: t.AccountID},
 			items: items,
 		}
 
@@ -113,7 +113,7 @@ func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID)
 			status:      Status(i.Status),
 			luckNumber:  i.LuckNumber,
 			winner:      i.Winner,
-			owner:       &owner{i.AccountID},
+			owner:       &owner{id: i.AccountID},
 		}
 		items = append(items, current)
 	}
@@ -150,7 +150,7 @@ func (d *Database) findByID(ctx context.Context, tableID uuid.UUID) (*table, err
 	return &table{
 		id:    result.ID,
 		name:  result.Name,
-		owner: &owner{result.AccountID},
+		owner: &owner{id: result.AccountID},
 		items: items,
 	}, nil
 }
@@ -215,7 +215,7 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 	return &table{
 		id:    resultTable.ID,
 		name:  resultTable.Name,
-		owner: &owner{resultTable.AccountId},
+		owner: &owner{id: resultTable.AccountId},
 		items: items,
 	}, nil
 }
@@ -246,26 +246,27 @@ func (d *Database) findByItemID(ctx context.Context, tableID uuid.UUID, id uuid.
 		luckNumber:  result.LuckNumber,
 		winner:      result.Winner,
 		status:      Status(result.Status),
-		owner:       &owner{result.AccountID},
+		owner:       &owner{id: result.AccountID},
 	}, nil
 }
 
 func (d *Database) findTableOwnerByID(ctx context.Context, tableID uuid.UUID) (*owner, error) {
 
 	type Result struct {
-		ID uuid.NullUUID
+		ID    uuid.NullUUID
+		Email string
 	}
 
-	statement := "select account_id from tables where id = $1"
+	statement := "select a.id, a.email from tables as t inner join accounts as a on t.account_id = a.id where t.id = $1"
 
 	result := &Result{}
-	err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&result.ID)
+	err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&result.ID, &result.Email)
 
 	if err != nil {
 		return nil, fmt.Errorf("not was possible to find the owner %v", err)
 	}
 
-	return &owner{result.ID}, nil
+	return &owner{result.ID, result.Email}, nil
 }
 
 func (d *Database) updateItem(ctx context.Context, i *item) error {

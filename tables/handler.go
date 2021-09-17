@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/wevnasc/baby-guess/config"
 	"github.com/wevnasc/baby-guess/db"
+	"github.com/wevnasc/baby-guess/email"
 	"github.com/wevnasc/baby-guess/server"
 )
 
@@ -198,7 +199,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	iRouter.HandleFunc("/approve", h.approveItemHandler()).Methods(http.MethodPost)
 }
 
-func NewHandler(db *db.Store, config *config.Config) *Handler {
-	ctrl := newController(newDatabase(db))
+func NewHandler(db *db.Store, config *config.Config, email *email.Connection) *Handler {
+	ctrl := newController(newDatabase(db), email)
 	return &Handler{ctrl, config}
 }

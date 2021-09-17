@@ -4,15 +4,17 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/wevnasc/baby-guess/email"
 	"github.com/wevnasc/baby-guess/server"
 )
 
 type controller struct {
 	database *Database
+	email    *email.Connection
 }
 
-func newController(database *Database) *controller {
-	return &controller{database}
+func newController(database *Database, email *email.Connection) *controller {
+	return &controller{database, email}
 }
 
 func (c *controller) create(ctx context.Context, table *table) (*table, error) {
@@ -24,7 +26,6 @@ func (c *controller) all(ctx context.Context, accountID uuid.UUID) ([]table, err
 }
 
 func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected item) error {
-
 	owner, err := c.database.findTableOwnerByID(ctx, tableID)
 
 	if err != nil {
@@ -48,6 +49,11 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 	if err := c.database.updateItem(ctx, item); err != nil {
 		return server.NewError("not was possible to select the item", server.OperationError)
 	}
+
+	go func() {
+		e, _ := email.NewFromTemplate(c.email, email.ItemSelected)
+		e.Send([]string{owner.email}, map[string]string{"item": item.description})
+	}()
 
 	return nil
 }

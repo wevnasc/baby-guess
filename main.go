@@ -55,7 +55,7 @@ func run() error {
 	mux.Use(server.Headers)
 
 	auth.NewHandler(store, config, email).SetupRoutes(mux)
-	tables.NewHandler(store, config).SetupRoutes(mux)
+	tables.NewHandler(store, config, email).SetupRoutes(mux)
 
 	srv := server.New(mux, ServerAddr)
 

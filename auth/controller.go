@@ -30,13 +30,8 @@ func (c *controller) create(ctx context.Context, account *account) (*account, er
 		return nil, server.NewError("not was possible to create the account", server.OperationError)
 	}
 
-	e, err := email.NewFromTemplate(c.email, email.AccountCreated)
-
-	if err != nil {
-		return nil, server.NewError("not was possible to send the email", server.OperationError)
-	}
-
 	go func() {
+		e, _ := email.NewFromTemplate(c.email, email.AccountCreated)
 		e.Send([]string{a.email}, map[string]string{"name": a.name})
 	}()
 

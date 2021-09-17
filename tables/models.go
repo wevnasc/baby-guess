@@ -23,11 +23,12 @@ const (
 )
 
 type owner struct {
-	id uuid.NullUUID
+	id    uuid.NullUUID
+	email string
 }
 
 func newOwner(id uuid.UUID) *owner {
-	return &owner{uuid.NullUUID{UUID: id, Valid: true}}
+	return &owner{id: uuid.NullUUID{UUID: id, Valid: true}}
 }
 
 func (o *owner) isEquals(other *owner) bool {
