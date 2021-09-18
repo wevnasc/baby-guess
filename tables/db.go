@@ -19,15 +19,21 @@ func newDatabase(DB *db.Store) *Database {
 
 func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]table, error) {
 
+	type AccountResult struct {
+		ID    uuid.NullUUID
+		Name  string
+		Email string
+	}
+
 	type TableResult struct {
-		ID        uuid.UUID
-		Name      string
-		AccountID uuid.NullUUID
+		ID      uuid.UUID
+		Name    string
+		account *AccountResult
 	}
 
 	tables := []table{}
 
-	statement := "select id, name, account_id from tables where account_id = $1"
+	statement := "select t.id, t.name, t.account_id, a.name, a.email from tables as t left join accounts as a on t.account_id = a.id where t.account_id = $1"
 
 	tt := []TableResult{}
 
@@ -38,9 +44,9 @@ func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]t
 	}
 
 	for rows.Next() {
-		t := &TableResult{}
+		t := &TableResult{account: &AccountResult{}}
 
-		if err := rows.Scan(&t.ID, &t.Name, &t.AccountID); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.account.ID, &t.account.Name, &t.account.Email); err != nil {
 			return nil, err
 		}
 
@@ -55,10 +61,16 @@ func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]t
 			return nil, err
 		}
 
+		currentOwner := &owner{
+			id:    t.account.ID,
+			name:  t.account.Name,
+			email: t.account.Email,
+		}
+
 		current := table{
 			id:    t.ID,
 			name:  t.Name,
-			owner: &owner{id: t.AccountID},
+			owner: currentOwner,
 			items: items,
 		}
 
@@ -75,18 +87,24 @@ func (d *Database) findAllByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]t
 
 func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID) ([]item, error) {
 
+	type AccountResult struct {
+		ID    uuid.NullUUID
+		Name  db.NullString
+		Email db.NullString
+	}
+
 	type ItemResult struct {
 		ID          uuid.UUID
 		Description string
 		LuckNumber  int
 		Winner      bool
 		Status      int
-		AccountID   uuid.NullUUID
+		account     *AccountResult
 	}
 
 	items := []item{}
 
-	statement := "select id, description, status, luck_number, winner, account_id from items where table_id = $1 order by luck_number"
+	statement := "select i.id, i.description, i.status, i.luck_number, i.winner, i.account_id, a.name, a.email from items as i left join accounts as a on i.account_id = a.id where i.table_id = $1 order by i.luck_number"
 
 	ii := []ItemResult{}
 
@@ -97,9 +115,9 @@ func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID)
 	}
 
 	for rows.Next() {
-		i := ItemResult{}
+		i := ItemResult{account: &AccountResult{}}
 
-		if err := rows.Scan(&i.ID, &i.Description, &i.Status, &i.LuckNumber, &i.Winner, &i.AccountID); err != nil {
+		if err := rows.Scan(&i.ID, &i.Description, &i.Status, &i.LuckNumber, &i.Winner, &i.account.ID, &i.account.Name, &i.account.Email); err != nil {
 			return nil, err
 		}
 
@@ -107,13 +125,19 @@ func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID)
 	}
 
 	for _, i := range ii {
+		currentOwner := &owner{
+			id:    i.account.ID,
+			name:  string(i.account.Name),
+			email: string(i.account.Email),
+		}
+
 		current := item{
 			id:          i.ID,
 			description: i.Description,
 			status:      Status(i.Status),
 			luckNumber:  i.LuckNumber,
 			winner:      i.Winner,
-			owner:       &owner{id: i.AccountID},
+			owner:       currentOwner,
 		}
 		items = append(items, current)
 	}
@@ -127,17 +151,24 @@ func (d *Database) findAllItemsByTableID(ctx context.Context, tableID uuid.UUID)
 }
 
 func (d *Database) findByID(ctx context.Context, tableID uuid.UUID) (*table, error) {
-	type Result struct {
-		ID        uuid.UUID
-		Name      string
-		AccountID uuid.NullUUID
+
+	type AccountResult struct {
+		ID    uuid.NullUUID
+		Name  string
+		Email string
 	}
 
-	statement := "select id, name, account_id from tables where id = $1"
+	type TableResult struct {
+		ID      uuid.UUID
+		Name    string
+		account *AccountResult
+	}
 
-	result := Result{}
+	statement := "select t.id, t.name, t.account_id, a.Name, a.Email from tables as t left join accounts as a on t.account_id = a.id where t.id = $1"
 
-	if err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&result.ID, &result.Name, &result.AccountID); err != nil {
+	tr := TableResult{account: &AccountResult{}}
+
+	if err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&tr.ID, &tr.Name, &tr.account.ID, &tr.account.Name, &tr.account.Email); err != nil {
 		return nil, fmt.Errorf("not was possible to query tables %v", err)
 	}
 
@@ -147,10 +178,16 @@ func (d *Database) findByID(ctx context.Context, tableID uuid.UUID) (*table, err
 		return nil, err
 	}
 
+	owner := &owner{
+		id:    tr.account.ID,
+		name:  tr.account.Name,
+		email: tr.account.Email,
+	}
+
 	return &table{
-		id:    result.ID,
-		name:  result.Name,
-		owner: &owner{id: result.AccountID},
+		id:    tr.ID,
+		name:  tr.Name,
+		owner: owner,
 		items: items,
 	}, nil
 }
@@ -222,22 +259,43 @@ func (d *Database) create(ctx context.Context, t *table) (*table, error) {
 
 func (d *Database) findByItemID(ctx context.Context, tableID uuid.UUID, id uuid.UUID) (*item, error) {
 
-	type Result struct {
+	type AccountResult struct {
+		ID    uuid.NullUUID
+		Name  db.NullString
+		Email db.NullString
+	}
+
+	type ItemResult struct {
 		ID          uuid.UUID
 		Description string
 		Status      int
 		LuckNumber  int
 		Winner      bool
-		AccountID   uuid.NullUUID
+		account     *AccountResult
 	}
 
-	statement := "select id, description, status, luck_number, winner, account_id from items where id = $1 and table_id = $2"
+	statement := "select i.id, i.description, i.status, i.luck_number, i.winner, i.account_id, a.name, a.email from items as i left join accounts as a on i.account_id = a.id where i.id = $1 and i.table_id = $2"
 
-	result := &Result{}
-	err := d.DB.QueryRowContext(ctx, statement, id, tableID).Scan(&result.ID, &result.Description, &result.Status, &result.LuckNumber, &result.Winner, &result.AccountID)
+	result := &ItemResult{account: &AccountResult{}}
+	err := d.DB.QueryRowContext(ctx, statement, id, tableID).Scan(
+		&result.ID,
+		&result.Description,
+		&result.Status,
+		&result.LuckNumber,
+		&result.Winner,
+		&result.account.ID,
+		&result.account.Name,
+		&result.account.Email,
+	)
 
 	if err != nil {
 		return nil, fmt.Errorf("not was possible to find the item %v", err)
+	}
+
+	owner := &owner{
+		id:    result.account.ID,
+		name:  string(result.account.Name),
+		email: string(result.account.Email),
 	}
 
 	return &item{
@@ -246,7 +304,7 @@ func (d *Database) findByItemID(ctx context.Context, tableID uuid.UUID, id uuid.
 		luckNumber:  result.LuckNumber,
 		winner:      result.Winner,
 		status:      Status(result.Status),
-		owner:       &owner{id: result.AccountID},
+		owner:       owner,
 	}, nil
 }
 
@@ -254,19 +312,24 @@ func (d *Database) findTableOwnerByID(ctx context.Context, tableID uuid.UUID) (*
 
 	type Result struct {
 		ID    uuid.NullUUID
+		Name  string
 		Email string
 	}
 
-	statement := "select a.id, a.email from tables as t inner join accounts as a on t.account_id = a.id where t.id = $1"
+	statement := "select a.id, a.name, a.email from tables as t inner join accounts as a on t.account_id = a.id where t.id = $1"
 
 	result := &Result{}
-	err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&result.ID, &result.Email)
+	err := d.DB.QueryRowContext(ctx, statement, tableID).Scan(&result.ID, &result.Name, &result.Email)
 
 	if err != nil {
 		return nil, fmt.Errorf("not was possible to find the owner %v", err)
 	}
 
-	return &owner{result.ID, result.Email}, nil
+	return &owner{
+		id:    result.ID,
+		name:  result.Name,
+		email: result.Email,
+	}, nil
 }
 
 func (d *Database) updateItem(ctx context.Context, i *item) error {
@@ -288,4 +351,28 @@ func (d *Database) updateItem(ctx context.Context, i *item) error {
 
 		return nil
 	})
+}
+
+func (d *Database) findOwnerByID(ctx context.Context, ownerID uuid.UUID) (*owner, error) {
+
+	type Result struct {
+		ID    uuid.NullUUID
+		Name  string
+		Email string
+	}
+
+	statement := "select a.id, a.name, a.email from accounts as a where a.id = $1"
+
+	result := &Result{}
+	err := d.DB.QueryRowContext(ctx, statement, ownerID).Scan(&result.ID, &result.Name, &result.Email)
+
+	if err != nil {
+		return nil, fmt.Errorf("not was possible to find the owner %v", err)
+	}
+
+	return &owner{
+		id:    result.ID,
+		name:  result.Name,
+		email: result.Email,
+	}, nil
 }

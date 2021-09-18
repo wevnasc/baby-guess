@@ -24,6 +24,7 @@ const (
 
 type owner struct {
 	id    uuid.NullUUID
+	name  string
 	email string
 }
 

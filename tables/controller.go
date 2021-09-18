@@ -50,8 +50,10 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 		return server.NewError("not was possible to select the item", server.OperationError)
 	}
 
+	itemOwner, _ := c.database.findOwnerByID(ctx, selected.owner.id.UUID)
+
 	go func() {
-		c.email.Send(email.ItemSelected, []string{owner.email}, map[string]string{"item": item.description})
+		c.email.Send(email.ItemSelected, []string{owner.email}, map[string]string{"item": item.description, "name": itemOwner.name})
 	}()
 
 	return nil
