@@ -141,5 +141,21 @@ func (c *controller) draw(ctx context.Context, owner *owner, tableID uuid.UUID) 
 		return nil, server.NewError(err.Error(), server.OperationError)
 	}
 
+	go func() {
+
+		c.email.Send(email.Winner, []string{item.owner.email}, map[string]string{"table_name": table.name, "name": item.owner.name})
+
+		losers, err := table.losers()
+
+		if err != nil {
+			return
+		}
+
+		for _, loser := range losers {
+			c.email.Send(email.Loser, []string{loser.email}, map[string]string{"table_name": table.name, "name": loser.name})
+		}
+
+	}()
+
 	return item, nil
 }

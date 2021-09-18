@@ -7,5 +7,5 @@ const (
 	ItemSelected            = "item_selected"
 	ItemApproved            = "item_approved"
 	Winner                  = "winner"
-	Losener                 = "looser"
+	Loser                   = "loser"
 )

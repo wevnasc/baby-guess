@@ -116,10 +116,10 @@ func (t *table) isOwner(other *owner) bool {
 	return t.owner.isEquals(other)
 }
 
-func (t *table) winner() *item {
+func (t *table) winner() *owner {
 	for _, item := range t.items {
 		if item.winner {
-			return &item
+			return item.owner
 		}
 	}
 
@@ -140,12 +140,40 @@ func (t *table) drawWinner() (*item, error) {
 	rand.Seed(time.Now().Unix())
 	n := rand.Intn(len(t.items)-1) + 1
 
-	for _, item := range t.items {
-		if item.luckNumber == n {
-			item.winner = true
-			return &item, nil
+	for i, _ := range t.items {
+		if t.items[i].luckNumber == n {
+			t.items[i].winner = true
+			return &t.items[i], nil
 		}
 	}
 
 	return nil, errors.New("not was possible to draw a number")
+}
+
+func (t *table) losers() (list []owner, _ error) {
+	exists := make(map[string]bool, len(t.items))
+
+	winner := t.winner()
+
+	if winner == nil {
+		return nil, errors.New("no winner found to determine the losers")
+	}
+
+	exists[winner.id.UUID.String()] = true
+
+	for _, item := range t.items {
+
+		key := item.owner.id.UUID.String()
+
+		_, ok := exists[key]
+
+		if ok {
+			continue
+		}
+		exists[key] = true
+
+		list = append(list, *item.owner)
+	}
+
+	return list, nil
 }
