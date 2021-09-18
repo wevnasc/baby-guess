@@ -112,6 +112,10 @@ func (c *controller) approveItem(ctx context.Context, owner *owner, tableID uuid
 		return server.NewError("not was possible to unselect the item", server.OperationError)
 	}
 
+	go func() {
+		c.email.Send(email.ItemApproved, []string{item.owner.email}, map[string]string{"name": item.owner.name, "item": item.description})
+	}()
+
 	return nil
 }
 
