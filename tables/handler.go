@@ -199,7 +199,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	iRouter.HandleFunc("/approve", h.approveItemHandler()).Methods(http.MethodPost)
 }
 
-func NewHandler(db *db.Store, config *config.Config, email *email.Connection) *Handler {
+func NewHandler(db *db.Store, config *config.Config, email email.Client) *Handler {
 	ctrl := newController(newDatabase(db), email)
 	return &Handler{ctrl, config}
 }

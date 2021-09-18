@@ -10,10 +10,10 @@ import (
 
 type controller struct {
 	database *Database
-	email    *email.Connection
+	email    email.Client
 }
 
-func newController(database *Database, email *email.Connection) *controller {
+func newController(database *Database, email email.Client) *controller {
 	return &controller{database, email}
 }
 
@@ -31,8 +31,7 @@ func (c *controller) create(ctx context.Context, account *account) (*account, er
 	}
 
 	go func() {
-		e, _ := email.NewFromTemplate(c.email, email.AccountCreated)
-		e.Send([]string{a.email}, map[string]string{"name": a.name})
+		c.email.Send(email.AccountCreated, []string{a.email}, map[string]string{"name": a.name})
 	}()
 
 	return a, nil

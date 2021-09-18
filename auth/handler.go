@@ -102,7 +102,7 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	r.Methods(http.MethodGet).Subrouter().HandleFunc("/login", h.loginHandler())
 }
 
-func NewHandler(db *db.Store, config *config.Config, email *email.Connection) *Handler {
+func NewHandler(db *db.Store, config *config.Config, email email.Client) *Handler {
 	ctrl := newController(newDatabase(db), email)
 	return &Handler{ctrl, config}
 }

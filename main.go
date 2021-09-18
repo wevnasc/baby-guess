@@ -42,12 +42,7 @@ func run() error {
 
 	defer store.Close()
 
-	email := email.NewConnection(
-		"smtp.gmail.com",
-		"587",
-		"weverson.sn@gmail.com",
-		"",
-	)
+	email := &email.DebugClient{}
 
 	config := config.New(Secret)
 

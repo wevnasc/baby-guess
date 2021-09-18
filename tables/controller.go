@@ -10,10 +10,10 @@ import (
 
 type controller struct {
 	database *Database
-	email    *email.Connection
+	email    email.Client
 }
 
-func newController(database *Database, email *email.Connection) *controller {
+func newController(database *Database, email email.Client) *controller {
 	return &controller{database, email}
 }
 
@@ -51,8 +51,7 @@ func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected
 	}
 
 	go func() {
-		e, _ := email.NewFromTemplate(c.email, email.ItemSelected)
-		e.Send([]string{owner.email}, map[string]string{"item": item.description})
+		c.email.Send(email.ItemSelected, []string{owner.email}, map[string]string{"item": item.description})
 	}()
 
 	return nil
