@@ -59,10 +59,16 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 
 func (h *Handler) allTablesHandler() http.HandlerFunc {
 
+	type ownerResponse struct {
+		ID    uuid.UUID `json:"id"`
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+	}
+
 	type itemResponse struct {
-		ID          uuid.UUID  `json:"id"`
-		Description string     `json:"description"`
-		AccountID   *uuid.UUID `json:"account_id,omitempty"`
+		ID          uuid.UUID      `json:"id"`
+		Description string         `json:"description"`
+		Owner       *ownerResponse `json:"owner,omitempty"`
 	}
 
 	type tablesResponse struct {
@@ -71,13 +77,7 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 		Items []itemResponse `json:"items"`
 	}
 
-	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		tables, err := h.ctrl.all(r.Context(), server.AccountUUID(r))
-
-		if err != nil {
-			return err
-		}
-
+	toResponse := func(tables []table) []tablesResponse {
 		var tt = []tablesResponse{}
 
 		for _, table := range tables {
@@ -86,10 +86,19 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 
 			for _, item := range table.items {
 
+				var o *ownerResponse
+				if item.owner.id.Valid {
+					o = &ownerResponse{
+						ID:    item.owner.id.UUID,
+						Name:  item.owner.name,
+						Email: item.owner.email,
+					}
+				}
+
 				i := itemResponse{
 					ID:          item.id,
 					Description: item.description,
-					AccountID:   item.owner.nullableID(),
+					Owner:       o,
 				}
 
 				ii = append(ii, i)
@@ -104,7 +113,18 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 			tt = append(tt, t)
 		}
 
-		server.Json(rw, tt, http.StatusOK)
+		return tt
+	}
+
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		tables, err := h.ctrl.all(r.Context(), server.AccountUUID(r))
+
+		if err != nil {
+			return err
+		}
+
+		response := toResponse(tables)
+		server.Json(rw, response, http.StatusOK)
 		return nil
 	})
 }
