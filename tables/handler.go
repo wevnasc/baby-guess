@@ -59,6 +59,38 @@ func (h *Handler) createTablesHandler() http.HandlerFunc {
 
 func (h *Handler) allTablesHandler() http.HandlerFunc {
 
+	type tablesResponse struct {
+		ID   uuid.UUID `json:"id"`
+		Name string    `json:"name"`
+	}
+
+	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		tables, err := h.ctrl.allTables(r.Context(), server.AccountUUID(r))
+
+		if err != nil {
+			return err
+		}
+
+		tt := make([]tablesResponse, len(tables))
+		for i := range tables {
+
+			current := tables[i]
+
+			tt[i] = tablesResponse{
+				ID:   current.id,
+				Name: current.name,
+			}
+
+		}
+
+		server.Json(rw, tt, http.StatusOK)
+		return nil
+	})
+
+}
+
+func (h *Handler) oneTablesHandler() http.HandlerFunc {
+
 	type ownerResponse struct {
 		ID    uuid.UUID `json:"id"`
 		Name  string    `json:"name"`
@@ -77,53 +109,47 @@ func (h *Handler) allTablesHandler() http.HandlerFunc {
 		Items []itemResponse `json:"items"`
 	}
 
-	toResponse := func(tables []table) []tablesResponse {
-		var tt = []tablesResponse{}
+	toResponse := func(table table) tablesResponse {
 
-		for _, table := range tables {
+		var ii = []itemResponse{}
 
-			var ii = []itemResponse{}
+		for _, item := range table.items {
 
-			for _, item := range table.items {
-
-				var o *ownerResponse
-				if item.owner.id.Valid {
-					o = &ownerResponse{
-						ID:    item.owner.id.UUID,
-						Name:  item.owner.name,
-						Email: item.owner.email,
-					}
+			var o *ownerResponse
+			if item.owner.id.Valid {
+				o = &ownerResponse{
+					ID:    item.owner.id.UUID,
+					Name:  item.owner.name,
+					Email: item.owner.email,
 				}
-
-				i := itemResponse{
-					ID:          item.id,
-					Description: item.description,
-					Owner:       o,
-				}
-
-				ii = append(ii, i)
 			}
 
-			t := tablesResponse{
-				ID:    table.id,
-				Name:  table.name,
-				Items: ii,
+			i := itemResponse{
+				ID:          item.id,
+				Description: item.description,
+				Owner:       o,
 			}
 
-			tt = append(tt, t)
+			ii = append(ii, i)
 		}
 
-		return tt
+		t := tablesResponse{
+			ID:    table.id,
+			Name:  table.name,
+			Items: ii,
+		}
+
+		return t
 	}
 
 	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		tables, err := h.ctrl.all(r.Context(), server.AccountUUID(r))
+		table, err := h.ctrl.oneTable(r.Context(), server.PathUUID(r, "table_id"))
 
 		if err != nil {
 			return err
 		}
 
-		response := toResponse(tables)
+		response := toResponse(*table)
 		server.Json(rw, response, http.StatusOK)
 		return nil
 	})
@@ -202,6 +228,7 @@ func (h *Handler) drawHandler() http.HandlerFunc {
 }
 
 func (h *Handler) SetupRoutes(r *mux.Router) {
+	//private routes
 	tRouter := r.PathPrefix("/tables").Subrouter()
 	tRouter.Use(server.Auth(h.config))
 	tRouter.HandleFunc("", h.createTablesHandler()).Methods(http.MethodPost)
@@ -217,6 +244,11 @@ func (h *Handler) SetupRoutes(r *mux.Router) {
 	iRouter.HandleFunc("/select", h.selectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/unselect", h.unselectItemHandler()).Methods(http.MethodPost)
 	iRouter.HandleFunc("/approve", h.approveItemHandler()).Methods(http.MethodPost)
+
+	//public routes
+	tdpRouter := r.PathPrefix("/tables/{table_id}").Subrouter()
+	tdpRouter.Use(server.ParseUUID("table_id"))
+	tdpRouter.HandleFunc("", h.oneTablesHandler()).Methods(http.MethodGet)
 }
 
 func NewHandler(db *db.Store, config *config.Config, email email.Client) *Handler {

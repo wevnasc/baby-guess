@@ -21,8 +21,12 @@ func (c *controller) create(ctx context.Context, table *table) (*table, error) {
 	return c.database.create(ctx, table)
 }
 
-func (c *controller) all(ctx context.Context, accountID uuid.UUID) ([]table, error) {
-	return c.database.findAllByOwnerID(ctx, accountID)
+func (c *controller) allTables(ctx context.Context, ownerID uuid.UUID) ([]table, error) {
+	return c.database.findAllByOwnerID(ctx, ownerID)
+}
+
+func (c *controller) oneTable(ctx context.Context, tableID uuid.UUID) (*table, error) {
+	return c.database.findByID(ctx, tableID)
 }
 
 func (c *controller) selectItem(ctx context.Context, tableID uuid.UUID, selected item) error {
