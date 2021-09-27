@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	"github.com/wevnasc/baby-guess/config"
 )
 
-func New(c *Connection) (*Store, error) {
+func New(c *config.Config) (*Store, error) {
 	url := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		c.Host,
-		c.Port,
-		c.User,
-		c.Password,
-		c.Database,
+		c.DBHost,
+		c.DBPort,
+		c.DBUser,
+		c.DBPass,
+		c.DBName,
 	)
 
 	db, err := sql.Open("postgres", url)

@@ -3,6 +3,8 @@ package email
 import (
 	"fmt"
 	"net/smtp"
+
+	"github.com/wevnasc/baby-guess/config"
 )
 
 type SmtpClient struct {
@@ -12,12 +14,12 @@ type SmtpClient struct {
 	auth smtp.Auth
 }
 
-func NewSmtpClient(host string, port string, user string, password string) *SmtpClient {
+func NewSmtpClient(config *config.Config) *SmtpClient {
 	return &SmtpClient{
-		Host: host,
-		Port: port,
-		User: user,
-		auth: smtp.PlainAuth("", user, password, host),
+		Host: config.SMTPHost,
+		Port: config.SMTPPort,
+		User: config.SMTPUser,
+		auth: smtp.PlainAuth("", config.SMTPUser, config.SMTPPass, config.SMTPHost),
 	}
 }
 

@@ -5,14 +5,6 @@ import (
 	"database/sql"
 )
 
-type Connection struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Database string
-}
-
 type Store struct {
 	*sql.DB
 }

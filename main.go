@@ -14,10 +14,7 @@ import (
 	"github.com/wevnasc/baby-guess/tables"
 )
 
-var (
-	ServerAddr = os.Getenv("HTTP_SERVER_ADDR")
-	Secret     = os.Getenv("AUTH_SECRET")
-)
+var Local = os.Getenv("LOCAL")
 
 func main() {
 	err := run()
@@ -28,13 +25,8 @@ func main() {
 }
 
 func run() error {
-	store, err := db.New(&db.Connection{
-		Host:     "localhost",
-		User:     "postgres",
-		Password: "postgres",
-		Port:     "5432",
-		Database: "baby_guess",
-	})
+	config := config.New(Local)
+	store, err := db.New(config)
 
 	if err != nil {
 		return err
@@ -42,17 +34,21 @@ func run() error {
 
 	defer store.Close()
 
-	email := &email.DebugClient{}
+	var emailClient email.Client
 
-	config := config.New(Secret)
+	if Local == "true" {
+		emailClient = &email.DebugClient{}
+	} else {
+		emailClient = email.NewSmtpClient(config)
+	}
 
 	mux := mux.NewRouter()
 	mux.Use(server.Headers)
 
-	auth.NewHandler(store, config, email).SetupRoutes(mux)
-	tables.NewHandler(store, config, email).SetupRoutes(mux)
+	auth.NewHandler(store, config, emailClient).SetupRoutes(mux)
+	tables.NewHandler(store, config, emailClient).SetupRoutes(mux)
 
-	srv := server.New(mux, ServerAddr)
+	srv := server.New(mux, config.ServerAddr)
 
 	if err := srv.ListenAndServe(); err != nil {
 		return fmt.Errorf("server failed to start: %v", err)
