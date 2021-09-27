@@ -67,8 +67,15 @@ func (h *Handler) createAccountsHandler() http.HandlerFunc {
 }
 
 func (h *Handler) loginHandler() http.HandlerFunc {
+	type accountResponse struct {
+		ID    uuid.UUID `json:"id"`
+		Name  string    `json:"name"`
+		Email string    `json:"email"`
+	}
+
 	type response struct {
-		Token string `json:"token"`
+		Token   string          `json:"token"`
+		Account accountResponse `json:"account"`
 	}
 
 	return server.ErrorHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -92,7 +99,13 @@ func (h *Handler) loginHandler() http.HandlerFunc {
 			return server.NewError("not was possible to authenticate the account", server.ResourceInvalid)
 		}
 
-		server.Json(rw, &response{Token: token}, http.StatusOK)
+		a := accountResponse{
+			ID:    account.id,
+			Name:  account.name,
+			Email: account.email,
+		}
+
+		server.Json(rw, &response{Token: token, Account: a}, http.StatusOK)
 		return nil
 	})
 }
