@@ -34,6 +34,12 @@ func run() error {
 
 	defer store.Close()
 
+	err = db.RunMigrations(store)
+
+	if err != nil {
+		return err
+	}
+
 	var emailClient email.Client
 
 	if Local == "true" {
