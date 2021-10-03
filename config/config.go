@@ -15,6 +15,7 @@ type Config struct {
 	DBPass     string
 	DBPort     string
 	DBName     string
+	DBSSL      string
 	SMTPHost   string
 	SMTPUser   string
 	SMTPPass   string
@@ -54,6 +55,7 @@ func New(local string) *Config {
 			DBPass:     conf["DB_PASS"],
 			DBPort:     conf["DB_PORT"],
 			DBName:     conf["DB_NAME"],
+			DBSSL:      conf["DB_SSL"],
 			SMTPHost:   conf["SMTP_HOST"],
 			SMTPUser:   conf["SMTP_USER"],
 			SMTPPass:   conf["SMTP_PASS"],
@@ -70,6 +72,7 @@ func New(local string) *Config {
 		DBPass:     os.Getenv("DB_PASS"),
 		DBPort:     os.Getenv("DB_PORT"),
 		DBName:     os.Getenv("DB_NAME"),
+		DBSSL:      os.Getenv("DB_SSL"),
 		SMTPHost:   os.Getenv("SMTP_HOST"),
 		SMTPUser:   os.Getenv("SMTP_USER"),
 		SMTPPass:   os.Getenv("SMTP_PASS"),
