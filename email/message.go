@@ -7,11 +7,11 @@ import (
 )
 
 type message struct {
-	body    string
-	subject string
+	body   string
+	header string
 }
 
-func newMessage(template Template) (*message, error) {
+func newMessage(from string, template Template) (*message, error) {
 	bfile := fmt.Sprintf("email/templates/%s_body.txt", template)
 	body, err := ioutil.ReadFile(bfile)
 
@@ -27,21 +27,21 @@ func newMessage(template Template) (*message, error) {
 	}
 
 	return &message{
-		body:    string(body),
-		subject: fmt.Sprintf("Subject:%s\n", subject),
+		body:   string(body),
+		header: fmt.Sprintf("From:%s\nSubject:%s\n", from, subject),
 	}, nil
 
 }
 
 func (e *message) get(meta map[string]string) []byte {
-	subject := e.subject
+	header := e.header
 	body := e.body
 
 	for key, value := range meta {
 		pattern := fmt.Sprintf("{%s}", key)
-		subject = strings.ReplaceAll(subject, pattern, value)
+		header = strings.ReplaceAll(header, pattern, value)
 		body = strings.ReplaceAll(body, pattern, value)
 	}
 
-	return []byte(subject + body)
+	return []byte(header + body)
 }

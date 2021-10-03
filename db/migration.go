@@ -22,9 +22,7 @@ func RunMigrations(store *Store) error {
 		return fmt.Errorf("error to create migration instance %v", err)
 	}
 
-	if err := m.Up(); err != nil {
-		return fmt.Errorf("error to run migrate", err)
-	}
+	m.Up()
 
 	return nil
 }

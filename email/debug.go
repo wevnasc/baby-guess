@@ -8,7 +8,7 @@ import (
 type DebugClient struct{}
 
 func (c *DebugClient) Send(template Template, to []string, metadata map[string]string) error {
-	email, err := newMessage(template)
+	email, err := newMessage("debug@example.com.br", template)
 
 	if err != nil {
 		fmt.Printf("%v \n", err)

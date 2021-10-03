@@ -19,6 +19,7 @@ type Config struct {
 	SMTPUser   string
 	SMTPPass   string
 	SMTPPort   string
+	SMTPFrom   string
 }
 
 func readFromLocal() map[string]string {
@@ -57,6 +58,7 @@ func New(local string) *Config {
 			SMTPUser:   conf["SMTP_USER"],
 			SMTPPass:   conf["SMTP_PASS"],
 			SMTPPort:   conf["SMTP_PORT"],
+			SMTPFrom:   conf["SMTP_FROM"],
 		}
 	}
 
@@ -72,5 +74,6 @@ func New(local string) *Config {
 		SMTPUser:   os.Getenv("SMTP_USER"),
 		SMTPPass:   os.Getenv("SMTP_PASS"),
 		SMTPPort:   os.Getenv("SMTP_PORT"),
+		SMTPFrom:   os.Getenv("SMTP_FROM"),
 	}
 }
