@@ -11,6 +11,7 @@ type SmtpClient struct {
 	Host string
 	Port string
 	User string
+	From string
 	auth smtp.Auth
 }
 
@@ -19,6 +20,7 @@ func NewSmtpClient(config *config.Config) *SmtpClient {
 		Host: config.SMTPHost,
 		Port: config.SMTPPort,
 		User: config.SMTPUser,
+		From: config.SMTPFrom,
 		auth: smtp.PlainAuth("", config.SMTPUser, config.SMTPPass, config.SMTPHost),
 	}
 }
@@ -28,7 +30,7 @@ func (c *SmtpClient) address() string {
 }
 
 func (c *SmtpClient) Send(template Template, to []string, meta map[string]string) error {
-	message, err := newMessage(template)
+	message, err := newMessage(c.From, template)
 
 	if err != nil {
 		return err
@@ -37,7 +39,7 @@ func (c *SmtpClient) Send(template Template, to []string, meta map[string]string
 	if err := smtp.SendMail(
 		c.address(),
 		c.auth,
-		c.User,
+		c.From,
 		to,
 		message.get(meta),
 	); err != nil {
