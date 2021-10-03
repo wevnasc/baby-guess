@@ -7,9 +7,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func New(mux *mux.Router, serverAddr string) *http.Server {
+func New(mux *mux.Router, port string) *http.Server {
 	return &http.Server{
-		Addr:         serverAddr,
+		Addr:         ":" + port,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,

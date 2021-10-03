@@ -54,7 +54,7 @@ func run() error {
 	auth.NewHandler(store, config, emailClient).SetupRoutes(mux)
 	tables.NewHandler(store, config, emailClient).SetupRoutes(mux)
 
-	srv := server.New(mux, config.ServerAddr)
+	srv := server.New(mux, config.Port)
 
 	if err := srv.ListenAndServe(); err != nil {
 		return fmt.Errorf("server failed to start: %v", err)
